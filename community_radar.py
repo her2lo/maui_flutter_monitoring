@@ -30,23 +30,16 @@ def get_github_stars(repo):
         return None
 
 def get_nuget_downloads(package_id):
-    url = f'https://www.nuget.org/packages/{package_id}/'
+    url = f'https://api.nuget.org/v3/registration5-semver1/{package_id.lower()}/index.json'
     response = requests.get(url)
     if response.status_code == 200:
-        soup = BeautifulSoup(response.text, 'html.parser')
-        stats_div = soup.find('div', class_='statistics-table')
-        if stats_div:
-            rows = stats_div.find_all('tr')
-            for row in rows:
-                header = row.find('th')
-                if header and 'Total' in header.text:
-                    value_td = row.find('td')
-                    if value_td:
-                        value_text = value_td.text.strip().replace(',', '')
-                        try:
-                            return int(value_text)
-                        except ValueError:
-                            pass
+        data = response.json()
+        versions = data.get('items', [])[0].get('items', [])
+        if versions:
+            total_downloads = sum(
+                v['catalogEntry']['downloads'] for v in versions if 'catalogEntry' in v
+            )
+            return total_downloads
     print(f'Fehler beim Abrufen von NuGet-Downloads für {package_id}')
     return None
 
